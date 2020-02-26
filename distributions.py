@@ -93,17 +93,21 @@ class Rosenbrock(Distribution):
 
 class MultiModal(Distribution):
     "Gaussians, same number of modes as dimensions, scattered centres"
-    def __init__(self, ndim, seed=12345):
+    def __init__(self, ndim, max_modes=10000000, seed=12345):
         self.ndim = ndim
         self.w = 0.5
         d = 0.9*20 / ndim
         x0 = -9.0
         with temp_seed(seed):
-            self.centres = (pyDOE.lhs(ndim)-0.5)*18  # centres from -9 .. 9 
+            self.centres = (pyDOE.lhs(ndim)-0.5)*18  # centres from -9 .. 9
+            if max_modes < ndim:
+                # pick max_modes modes at random
+                x = np.random.choice(np.arange(ndim, dtype=int), max_modes, replace=False)
+                self.centres = self.centres[x]
 
     def __call__(self, x):
         p = 0
-        p = [-0.5*np.linalg.norm(x-self.centres[i])**2 / self.w**2 for i in range(self.ndim)]
+        p = [-0.5*np.linalg.norm(x-c)**2 / self.w**2 for c in self.centres]
         p = logsumexp(p)
         return p
 
@@ -125,7 +129,7 @@ def main():
     GaussianShell(2).emcee_test()
     GaussianShell(5).emcee_test() 
     GaussianShell(10).emcee_test()
-    MultiModal(10).emcee_test()
+    MultiModal(10, max_modes=3).emcee_test()
     Exponential(4).emcee_test()
     Rosenbrock().emcee_test()
 
